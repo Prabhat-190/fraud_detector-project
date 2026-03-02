@@ -19,17 +19,51 @@ try:
 except Exception:
     CCXT_AVAILABLE = False
 
-# Renamed to force the server to train the new 500-Tree model automatically
-MODEL_FILE = "fraud_model_v6.pkl" 
+MODEL_FILE = "fraud_model_v7.pkl" 
 DATA_FILE = "credit_card_fraud_dataset_modified - credit_card_fraud_dataset_modified.csv"
 
-# ==========================================
-# 1. HIGH-PRECISION MACHINE LEARNING PIPELINE
-# ==========================================
+def augment_dataset(df):
+    if len(df) > 1000:
+        return df
+    
+    np.random.seed(42)
+    n = 5000
+    
+    amounts = np.random.exponential(scale=300, size=n)
+    times = np.random.randint(0, 86400, size=n)
+    ages = np.random.randint(18, 85, size=n)
+    locations = np.random.choice(["California", "New York", "London", "Online", "Tokyo"], size=n)
+    cats = np.random.choice(["Retail", "Electronics", "Crypto", "Entertainment"], size=n)
+    
+    is_fraud = np.zeros(n, dtype=int)
+    for i in range(n):
+        risk = 0.05 
+        if amounts[i] > 2000: risk += 0.3
+        if amounts[i] > 5000: risk += 0.4
+        if cats[i] == "Crypto" and amounts[i] > 1000: risk += 0.2
+        if locations[i] == "Online" and times[i] < 20000: risk += 0.1
+        if ages[i] < 25 and amounts[i] > 3000: risk += 0.15
+        
+        if np.random.rand() < risk:
+            is_fraud[i] = 1
+            
+    aug_df = pd.DataFrame({
+        'Amount': amounts, 
+        'Time': times, 
+        'CardHolderAge': ages, 
+        'Location': locations, 
+        'MerchantCategory': cats, 
+        'IsFraud': is_fraud
+    })
+    
+    return pd.concat([df, aug_df], ignore_index=True)
+
 def build_and_train_pipeline():
     if not os.path.exists(DATA_FILE): return None
     df = pd.read_csv(DATA_FILE)
     df = df.drop(columns=['TransactionID'], errors='ignore')
+    
+    df = augment_dataset(df)
     
     cat_cols = ['Location', 'MerchantCategory']
     num_cols = ['Amount', 'Time', 'CardHolderAge']
@@ -49,8 +83,7 @@ def build_and_train_pipeline():
     pipeline = ImbPipeline([
         ('preprocessor', preprocessor),
         ('smote', SMOTE(random_state=42, k_neighbors=2)), 
-        # UPGRADED: 500 trees and deeper logic for ultra-precise decimal probabilities
-        ('classifier', RandomForestClassifier(n_estimators=500, max_depth=12, random_state=42))
+        ('classifier', RandomForestClassifier(n_estimators=300, max_depth=15, random_state=42))
     ])
     
     pipeline.fit(X_train, y_train)
@@ -65,11 +98,7 @@ def get_model():
         except Exception: pass
     return build_and_train_pipeline()
 
-# ==========================================
-# 2. DYNAMIC REAL-TIME EXCHANGE API
-# ==========================================
 def fetch_live_trade(symbol="BTC/USD"):
-    """Fetches the actual last executed transaction and simulates global user traffic."""
     if not CCXT_AVAILABLE: return None
     try:
         exchange = ccxt.kraken()
@@ -81,14 +110,13 @@ def fetch_live_trade(symbol="BTC/USD"):
         trade_amount_crypto = last_trade['amount']
         trade_usd_value = trade_price * trade_amount_crypto
         
-        # DYNAMIC PROFILING: Mimics different users hitting the exchange in real-time
         locations = ["California", "New York", "London", "Online", "Tokyo", "Berlin", "Paris"]
         
         return {
             'Amount': float(trade_usd_value),
             'Time': int(time.time() % 86400),
-            'CardHolderAge': random.randint(18, 75), # Dynamic Age
-            'Location': random.choice(locations),    # Dynamic Geo-Node
+            'CardHolderAge': random.randint(18, 75),
+            'Location': random.choice(locations),
             'MerchantCategory': 'Crypto',
             'Side': last_trade['side'].upper(),
             'CryptoAmount': trade_amount_crypto,
@@ -97,9 +125,6 @@ def fetch_live_trade(symbol="BTC/USD"):
     except Exception as e:
         return None
 
-# ==========================================
-# 3. PRODUCTION UI & STREAMING DASHBOARD
-# ==========================================
 def main():
     st.set_page_config(page_title="FRAUD_SHIELD_PRO", page_icon="🛡️", layout="wide")
 
@@ -137,13 +162,12 @@ def main():
 
     tab1, tab2 = st.tabs(["📊 MANUAL INTERROGATION", "📡 LIVE NETWORK AUDIT (REAL-TIME)"])
 
-    # --- TAB 1: MANUAL AUDIT ---
     with tab1:
         col1, col2 = st.columns([0.4, 0.6], gap="large")
         with col1:
             with st.form("audit_form"):
                 st.subheader("📥 TRANSACTION PARAMETERS")
-                amt = st.number_input("USD AMOUNT", value=250.00, step=50.0)
+                amt = st.number_input("USD AMOUNT", value=250.00, step=10.0)
                 age_val = st.slider("HOLDER AGE", 18, 95, 30)
                 loc = st.selectbox("LOCATION", ["California", "New York", "London", "Online", "Tokyo"])
                 cat = st.selectbox("CATEGORY", ["Retail", "Electronics", "Crypto", "Entertainment"])
@@ -161,7 +185,6 @@ def main():
                 else:
                     st.success(f"✅ VERIFIED: {(prob*100):.2f}% - TRANSACTION SECURE")
 
-    # --- TAB 2: TRUE REAL-TIME PRODUCTION STREAM ---
     with tab2:
         st.subheader("📡 KRAKEN LIVE LEDGER (BTC/USD)")
         
@@ -177,11 +200,9 @@ def main():
                 trade = fetch_live_trade(symbol="BTC/USD")
                 
                 if trade is not None:
-                    # ML Inference on the EXACT transaction
                     input_df = pd.DataFrame([trade])
                     prob = model.predict_proba(input_df[['Amount', 'Time', 'CardHolderAge', 'Location', 'MerchantCategory']])[0][1]
                     
-                    # Log data to memory for the live terminal
                     timestamp = datetime.datetime.now().strftime("%H:%M:%S.%f")[:-3]
                     new_row = pd.DataFrame({
                         'Timestamp': [timestamp],
@@ -193,7 +214,6 @@ def main():
                     })
                     st.session_state.trade_history = pd.concat([new_row, st.session_state.trade_history]).head(10)
                     
-                    # Update Metrics UI
                     with metrics_placeholder.container():
                         st.markdown("<div class='metric-container'>", unsafe_allow_html=True)
                         m1, m2, m3, m4 = st.columns(4)
@@ -208,7 +228,6 @@ def main():
                         if prob > 0.5:
                             st.error(f"🚨 FRAUD ALERT: High-risk anomaly detected from {trade['Location']} node.")
 
-                    # Update Terminal UI
                     with terminal_placeholder.container():
                         st.markdown("### 💻 LIVE AUDIT TERMINAL")
                         display_df = st.session_state.trade_history.copy()
