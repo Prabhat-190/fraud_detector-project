@@ -47,8 +47,10 @@ def build_and_train_pipeline():
 
     pipeline = ImbPipeline([
         ('preprocessor', preprocessor),
-        ('smote', SMOTE(random_state=42)),
-        ('classifier', RandomForestClassifier(n_estimators=100, random_state=42))
+       
+        ('smote', SMOTE(random_state=42, k_neighbors=2)), 
+        
+        ('classifier', RandomForestClassifier(n_estimators=100, max_depth=4, random_state=42))
     ])
 
     pipeline.fit(X_train, y_train)
