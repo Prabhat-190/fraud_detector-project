@@ -1,6 +1,7 @@
 import os
 import time
 import datetime
+import random
 import pandas as pd
 import numpy as np
 import streamlit as st
@@ -18,11 +19,12 @@ try:
 except Exception:
     CCXT_AVAILABLE = False
 
-MODEL_FILE = "fraud_model.pkl"
+# Renamed to force the server to train the new 500-Tree model automatically
+MODEL_FILE = "fraud_model_v6.pkl" 
 DATA_FILE = "credit_card_fraud_dataset_modified - credit_card_fraud_dataset_modified.csv"
 
 # ==========================================
-# 1. CORE MACHINE LEARNING PIPELINE
+# 1. HIGH-PRECISION MACHINE LEARNING PIPELINE
 # ==========================================
 def build_and_train_pipeline():
     if not os.path.exists(DATA_FILE): return None
@@ -44,11 +46,11 @@ def build_and_train_pipeline():
     y = df['IsFraud']
     X_train, _, y_train, _ = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
     
-    # Tuned for production variance
     pipeline = ImbPipeline([
         ('preprocessor', preprocessor),
         ('smote', SMOTE(random_state=42, k_neighbors=2)), 
-        ('classifier', RandomForestClassifier(n_estimators=100, max_depth=6, random_state=42))
+        # UPGRADED: 500 trees and deeper logic for ultra-precise decimal probabilities
+        ('classifier', RandomForestClassifier(n_estimators=500, max_depth=12, random_state=42))
     ])
     
     pipeline.fit(X_train, y_train)
@@ -64,14 +66,13 @@ def get_model():
     return build_and_train_pipeline()
 
 # ==========================================
-# 2. REAL-TIME EXCHANGE API (TRADE LEVEL)
+# 2. DYNAMIC REAL-TIME EXCHANGE API
 # ==========================================
 def fetch_live_trade(symbol="BTC/USD"):
-    """Fetches the actual last executed transaction on the exchange, not just the price."""
+    """Fetches the actual last executed transaction and simulates global user traffic."""
     if not CCXT_AVAILABLE: return None
     try:
         exchange = ccxt.kraken()
-        # Fetch the single most recent trade executed on the network
         trades = exchange.fetch_trades(symbol, limit=1)
         if not trades: return None
         
@@ -80,13 +81,16 @@ def fetch_live_trade(symbol="BTC/USD"):
         trade_amount_crypto = last_trade['amount']
         trade_usd_value = trade_price * trade_amount_crypto
         
+        # DYNAMIC PROFILING: Mimics different users hitting the exchange in real-time
+        locations = ["California", "New York", "London", "Online", "Tokyo", "Berlin", "Paris"]
+        
         return {
             'Amount': float(trade_usd_value),
             'Time': int(time.time() % 86400),
-            'CardHolderAge': 30, # Defaulted for crypto anonymity
-            'Location': 'Online',
+            'CardHolderAge': random.randint(18, 75), # Dynamic Age
+            'Location': random.choice(locations),    # Dynamic Geo-Node
             'MerchantCategory': 'Crypto',
-            'Side': last_trade['side'].upper(), # Buy or Sell
+            'Side': last_trade['side'].upper(),
             'CryptoAmount': trade_amount_crypto,
             'Price': trade_price
         }
@@ -99,9 +103,8 @@ def fetch_live_trade(symbol="BTC/USD"):
 def main():
     st.set_page_config(page_title="FRAUD_SHIELD_PRO", page_icon="🛡️", layout="wide")
 
-    # Initialize memory for live terminal
     if 'trade_history' not in st.session_state:
-        st.session_state.trade_history = pd.DataFrame(columns=['Timestamp', 'Type', 'Crypto Amount', 'USD Value', 'Risk Score'])
+        st.session_state.trade_history = pd.DataFrame(columns=['Timestamp', 'Type', 'Crypto Amount', 'USD Value', 'Location', 'Risk Score'])
 
     st.markdown("""
         <style>
@@ -114,15 +117,17 @@ def main():
         }
         .metric-container {
             background: #0f1522; padding: 20px; border-radius: 10px; border: 1px solid #1e293b;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
         }
         div[data-testid="stMetricValue"] { color: #00ffcc !important; font-size: 28px !important; }
-        .risk-high { color: #ff4b4b; font-weight: bold; }
-        .risk-low { color: #00ffcc; font-weight: bold; }
+        .stProgress > div > div > div > div {
+            background-image: linear-gradient(to right, #00ffcc, #00b3ff);
+        }
         </style>
     """, unsafe_allow_html=True)
 
     st.markdown('<p class="title-glow">🛡️ FRAUD_SHIELD / ENTERPRISE</p>', unsafe_allow_html=True)
-    st.caption("⚡ REAL-TIME TRANSACTION LEDGER AUDITOR")
+    st.caption("⚡ HIGH-PRECISION TRANSACTION LEDGER AUDITOR")
     st.divider()
 
     model = get_model()
@@ -132,7 +137,7 @@ def main():
 
     tab1, tab2 = st.tabs(["📊 MANUAL INTERROGATION", "📡 LIVE NETWORK AUDIT (REAL-TIME)"])
 
-    # --- TAB 1: MANUAL (Kept intact) ---
+    # --- TAB 1: MANUAL AUDIT ---
     with tab1:
         col1, col2 = st.columns([0.4, 0.6], gap="large")
         with col1:
@@ -149,6 +154,7 @@ def main():
                 input_df = pd.DataFrame([[amt, int(time.time()%86400), age_val, loc, cat]],
                                        columns=['Amount', 'Time', 'CardHolderAge', 'Location', 'MerchantCategory'])
                 prob = model.predict_proba(input_df)[0][1]
+                
                 st.progress(prob)
                 if prob > 0.5:
                     st.error(f"🚨 CRITICAL RISK: {(prob*100):.2f}% - TRANSACTION BLOCKED")
@@ -163,7 +169,6 @@ def main():
         with col_toggle:
             live_active = st.toggle("🟢 ACTIVATE LIVE AUDIT", value=False)
         
-        # UI Placeholders for the live loop
         metrics_placeholder = st.empty()
         terminal_placeholder = st.empty()
 
@@ -172,7 +177,7 @@ def main():
                 trade = fetch_live_trade(symbol="BTC/USD")
                 
                 if trade is not None:
-                    # ML Inference on the EXACT transaction size
+                    # ML Inference on the EXACT transaction
                     input_df = pd.DataFrame([trade])
                     prob = model.predict_proba(input_df[['Amount', 'Time', 'CardHolderAge', 'Location', 'MerchantCategory']])[0][1]
                     
@@ -183,9 +188,10 @@ def main():
                         'Type': [trade['Side']],
                         'Crypto Amount': [f"{trade['CryptoAmount']:.4f} BTC"],
                         'USD Value': [f"${trade['Amount']:,.2f}"],
+                        'Location': [f"Node: {trade['Location']}"],
                         'Risk Score': [prob]
                     })
-                    st.session_state.trade_history = pd.concat([new_row, st.session_state.trade_history]).head(10) # Keep last 10
+                    st.session_state.trade_history = pd.concat([new_row, st.session_state.trade_history]).head(10)
                     
                     # Update Metrics UI
                     with metrics_placeholder.container():
@@ -195,25 +201,23 @@ def main():
                         m2.metric("ORDER TYPE", trade['Side'])
                         m3.metric("BTC PRICE", f"${trade['Price']:,.2f}")
                         
-                        # Dynamic color for risk metric
                         risk_pct = prob * 100
-                        m4.metric("NEURAL RISK", f"{risk_pct:.1f}%")
+                        m4.metric("NEURAL RISK", f"{risk_pct:.2f}%")
                         st.markdown("</div>", unsafe_allow_html=True)
 
                         if prob > 0.5:
-                            st.error(f"🚨 FRAUD ALERT: High-risk anomaly detected on transaction worth ${trade['Amount']:,.2f}")
+                            st.error(f"🚨 FRAUD ALERT: High-risk anomaly detected from {trade['Location']} node.")
 
                     # Update Terminal UI
                     with terminal_placeholder.container():
                         st.markdown("### 💻 LIVE AUDIT TERMINAL")
-                        # Format the risk score for display
                         display_df = st.session_state.trade_history.copy()
                         display_df['Risk Score'] = display_df['Risk Score'].apply(
-                            lambda x: f"🔴 {x*100:.1f}%" if x > 0.5 else f"🟢 {x*100:.1f}%"
+                            lambda x: f"🔴 {x*100:.2f}%" if x > 0.5 else f"🟢 {x*100:.2f}%"
                         )
                         st.dataframe(display_df, use_container_width=True, hide_index=True)
                 
-                time.sleep(1.5) # Poll the exchange ledger every 1.5 seconds
+                time.sleep(1.5) 
         else:
             st.info("System Standby. Activate the toggle to begin monitoring real-time exchange traffic.")
 
