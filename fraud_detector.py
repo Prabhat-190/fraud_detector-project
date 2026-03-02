@@ -8,9 +8,8 @@ import streamlit as st
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.compose import ColumnTransformer
-from sklearn.linear_model import LogisticRegression
-from imblearn.over_sampling import SMOTE
-from imblearn.pipeline import Pipeline as ImbPipeline
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.pipeline import Pipeline
 import joblib
 
 try:
@@ -19,31 +18,27 @@ try:
 except Exception:
     CCXT_AVAILABLE = False
 
-MODEL_FILE = "fraud_model_v9.pkl" 
-DATA_FILE = "credit_card_fraud_dataset_modified - credit_card_fraud_dataset_modified.csv"
+MODEL_FILE = "fraud_model_final_v11.pkl" 
 
-def augment_dataset(df):
-    if len(df) > 1000:
-        return df
-    
+def generate_dynamic_dataset():
     np.random.seed(42)
     n = 15000
-    
-    amounts = np.random.uniform(10.0, 15000.0, size=n)
+    amounts = np.random.uniform(5.0, 80000.0, size=n)
     times = np.random.randint(0, 86400, size=n)
     ages = np.random.randint(18, 85, size=n)
-    locations = np.random.choice(["California", "New York", "London", "Online", "Tokyo", "Berlin", "Paris"], size=n)
-    cats = np.random.choice(["Retail", "Electronics", "Crypto", "Entertainment", "Travel", "Food"], size=n)
+    locations = np.random.choice(["California", "New York", "London", "Online", "Tokyo"], size=n)
+    cats = np.random.choice(["Retail", "Electronics", "Crypto", "Entertainment"], size=n)
     
-    z = -4.0 + (amounts / 2000.0)
-    z = np.where(cats == "Crypto", z + 1.2, z)
-    z = np.where(locations == "Online", z + 0.6, z)
-    z = np.where(ages < 30, z + 0.4, z)
+    z = -3.5 + (amounts / 12000.0)
+    z = np.where(cats == "Crypto", z + 2.0, z)
+    z = np.where(locations == "Online", z + 1.2, z)
+    z = np.where(ages < 25, z + 0.8, z)
+    z = np.where(cats == "Retail", z - 1.5, z)
     
     probs = 1.0 / (1.0 + np.exp(-z))
     is_fraud = np.random.binomial(1, probs)
             
-    aug_df = pd.DataFrame({
+    return pd.DataFrame({
         'Amount': amounts, 
         'Time': times, 
         'CardHolderAge': ages, 
@@ -51,21 +46,12 @@ def augment_dataset(df):
         'MerchantCategory': cats, 
         'IsFraud': is_fraud
     })
-    
-    return pd.concat([df, aug_df], ignore_index=True)
 
 def build_and_train_pipeline():
-    if not os.path.exists(DATA_FILE): return None
-    df = pd.read_csv(DATA_FILE)
-    df = df.drop(columns=['TransactionID'], errors='ignore')
-    
-    df = augment_dataset(df)
+    df = generate_dynamic_dataset()
     
     cat_cols = ['Location', 'MerchantCategory']
     num_cols = ['Amount', 'Time', 'CardHolderAge']
-    
-    for col in num_cols: df[col] = df[col].fillna(df[col].median())
-    for col in cat_cols: df[col] = df[col].fillna(df[col].mode()[0])
     
     preprocessor = ColumnTransformer([
         ('num', StandardScaler(), num_cols),
@@ -76,10 +62,9 @@ def build_and_train_pipeline():
     y = df['IsFraud']
     X_train, _, y_train, _ = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
     
-    pipeline = ImbPipeline([
+    pipeline = Pipeline([
         ('preprocessor', preprocessor),
-        ('smote', SMOTE(random_state=42, k_neighbors=2)), 
-        ('classifier', LogisticRegression(max_iter=3000, random_state=42))
+        ('classifier', RandomForestClassifier(n_estimators=500, max_depth=None, min_samples_split=5, random_state=42))
     ])
     
     pipeline.fit(X_train, y_train)
@@ -106,7 +91,7 @@ def fetch_live_trade(symbol="BTC/USD"):
         trade_amount_crypto = last_trade['amount']
         trade_usd_value = trade_price * trade_amount_crypto
         
-        locations = ["California", "New York", "London", "Online", "Tokyo", "Berlin", "Paris"]
+        locations = ["California", "New York", "London", "Online", "Tokyo"]
         
         return {
             'Amount': float(trade_usd_value),
@@ -118,7 +103,7 @@ def fetch_live_trade(symbol="BTC/USD"):
             'CryptoAmount': trade_amount_crypto,
             'Price': trade_price
         }
-    except Exception as e:
+    except Exception:
         return None
 
 def main():
@@ -153,7 +138,7 @@ def main():
 
     model = get_model()
     if model is None:
-        st.error("SYSTEM HALTED: Dataset missing.")
+        st.error("SYSTEM HALTED: Model Initialization Failed.")
         st.stop()
 
     tab1, tab2 = st.tabs(["📊 MANUAL INTERROGATION", "📡 LIVE NETWORK AUDIT (REAL-TIME)"])
@@ -163,7 +148,7 @@ def main():
         with col1:
             with st.form("audit_form"):
                 st.subheader("📥 TRANSACTION PARAMETERS")
-                amt = st.number_input("USD AMOUNT", value=250.00, step=10.0)
+                amt = st.number_input("USD AMOUNT", value=250.00, step=1.00)
                 age_val = st.slider("HOLDER AGE", 18, 95, 30)
                 loc = st.selectbox("LOCATION", ["California", "New York", "London", "Online", "Tokyo"])
                 cat = st.selectbox("CATEGORY", ["Retail", "Electronics", "Crypto", "Entertainment"])
