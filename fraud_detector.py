@@ -8,7 +8,7 @@ import streamlit as st
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.compose import ColumnTransformer
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
 from imblearn.over_sampling import SMOTE
 from imblearn.pipeline import Pipeline as ImbPipeline
 import joblib
@@ -19,7 +19,7 @@ try:
 except Exception:
     CCXT_AVAILABLE = False
 
-MODEL_FILE = "fraud_model_v7.pkl" 
+MODEL_FILE = "fraud_model_v9.pkl" 
 DATA_FILE = "credit_card_fraud_dataset_modified - credit_card_fraud_dataset_modified.csv"
 
 def augment_dataset(df):
@@ -27,18 +27,18 @@ def augment_dataset(df):
         return df
     
     np.random.seed(42)
-    n = 20000
+    n = 15000
     
-    amounts = np.random.uniform(5.0, 120000.0, size=n)
+    amounts = np.random.uniform(10.0, 15000.0, size=n)
     times = np.random.randint(0, 86400, size=n)
     ages = np.random.randint(18, 85, size=n)
     locations = np.random.choice(["California", "New York", "London", "Online", "Tokyo", "Berlin", "Paris"], size=n)
     cats = np.random.choice(["Retail", "Electronics", "Crypto", "Entertainment", "Travel", "Food"], size=n)
     
-    z = -5.0 + (amounts / 40000.0)
-    z = np.where(cats == "Crypto", z + 1.5, z)
-    z = np.where(locations == "Online", z + 0.8, z)
-    z = np.where(ages < 30, z + 0.5, z)
+    z = -4.0 + (amounts / 2000.0)
+    z = np.where(cats == "Crypto", z + 1.2, z)
+    z = np.where(locations == "Online", z + 0.6, z)
+    z = np.where(ages < 30, z + 0.4, z)
     
     probs = 1.0 / (1.0 + np.exp(-z))
     is_fraud = np.random.binomial(1, probs)
@@ -79,7 +79,7 @@ def build_and_train_pipeline():
     pipeline = ImbPipeline([
         ('preprocessor', preprocessor),
         ('smote', SMOTE(random_state=42, k_neighbors=2)), 
-        ('classifier', RandomForestClassifier(n_estimators=300, max_depth=15, random_state=42))
+        ('classifier', LogisticRegression(max_iter=3000, random_state=42))
     ])
     
     pipeline.fit(X_train, y_train)
