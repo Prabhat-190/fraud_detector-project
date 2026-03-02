@@ -27,25 +27,21 @@ def augment_dataset(df):
         return df
     
     np.random.seed(42)
-    n = 5000
+    n = 20000
     
-    amounts = np.random.exponential(scale=300, size=n)
+    amounts = np.random.uniform(5.0, 120000.0, size=n)
     times = np.random.randint(0, 86400, size=n)
     ages = np.random.randint(18, 85, size=n)
-    locations = np.random.choice(["California", "New York", "London", "Online", "Tokyo"], size=n)
-    cats = np.random.choice(["Retail", "Electronics", "Crypto", "Entertainment"], size=n)
+    locations = np.random.choice(["California", "New York", "London", "Online", "Tokyo", "Berlin", "Paris"], size=n)
+    cats = np.random.choice(["Retail", "Electronics", "Crypto", "Entertainment", "Travel", "Food"], size=n)
     
-    is_fraud = np.zeros(n, dtype=int)
-    for i in range(n):
-        risk = 0.05 
-        if amounts[i] > 2000: risk += 0.3
-        if amounts[i] > 5000: risk += 0.4
-        if cats[i] == "Crypto" and amounts[i] > 1000: risk += 0.2
-        if locations[i] == "Online" and times[i] < 20000: risk += 0.1
-        if ages[i] < 25 and amounts[i] > 3000: risk += 0.15
-        
-        if np.random.rand() < risk:
-            is_fraud[i] = 1
+    z = -5.0 + (amounts / 40000.0)
+    z = np.where(cats == "Crypto", z + 1.5, z)
+    z = np.where(locations == "Online", z + 0.8, z)
+    z = np.where(ages < 30, z + 0.5, z)
+    
+    probs = 1.0 / (1.0 + np.exp(-z))
+    is_fraud = np.random.binomial(1, probs)
             
     aug_df = pd.DataFrame({
         'Amount': amounts, 
