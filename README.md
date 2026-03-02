@@ -1,5 +1,5 @@
 # 🏦 FRAUD_SHIELD / AUDIT_PRO  
-### AI-Based Transaction Risk Detection System  
+AI-Based Transaction Risk Detection System  
 
 🌐 **Live Application:**  
 👉 https://frauddetectorpy-hx8n54x28xuyzes4jrei9b.streamlit.app/
@@ -10,37 +10,41 @@
 
 FRAUD_SHIELD is a machine learning based fraud detection system that analyzes transaction details and predicts whether a transaction is likely to be fraudulent or legitimate.
 
-The goal of this project was not just to build a model, but to simulate a real-world fintech risk monitoring dashboard with a clean, professional UI and structured ML pipeline.
+The objective of this project was to simulate a real-world fintech risk monitoring dashboard using a structured ML pipeline and a professional user interface.
 
-It combines backend ML engineering with frontend user experience design.
+It combines:
+
+- Backend ML engineering  
+- Data preprocessing & imbalance handling  
+- Interactive Streamlit dashboard  
 
 ---
 
 ## 🧠 How It Works
 
-The system follows a proper ML workflow:
+The system follows a complete ML workflow:
 
-1. Data cleaning and preprocessing  
-2. Handling missing values  
-3. Encoding categorical features  
-4. Scaling numerical features  
-5. Handling class imbalance using SMOTE  
-6. Training a Random Forest classifier  
-7. Saving the full pipeline for real-time inference  
+- Data cleaning and preprocessing  
+- Handling missing values  
+- Encoding categorical features  
+- Scaling numerical features  
+- Handling class imbalance using **SMOTE**  
+- Training a **Random Forest classifier**  
+- Probability-based fraud scoring  
 
-The complete preprocessing + model logic is bundled inside a single pipeline using `ImbPipeline`, ensuring consistent transformations during prediction.
+The entire preprocessing and modeling logic is bundled inside a single pipeline using `ImbPipeline`, ensuring consistent transformations during prediction.
 
 ---
 
-## ⚙ Model Details
+## ⚙️ Model Details
 
-- Algorithm: Random Forest Classifier  
-- Class imbalance handled using SMOTE  
-- Stratified train-test split  
-- Probability-based risk scoring  
-- Threshold-based fraud detection  
+- **Algorithm:** Random Forest Classifier  
+- **Imbalance Handling:** SMOTE (Synthetic Minority Oversampling)  
+- **Train/Test Split:** Stratified sampling  
+- **Output:** Fraud probability score  
+- **Decision Logic:** Threshold-based classification  
 
-The model outputs a fraud probability score, which is visualized in the dashboard as a risk index.
+The system outputs a fraud probability which is visualized as a risk index inside the dashboard.
 
 ---
 
@@ -48,15 +52,15 @@ The model outputs a fraud probability score, which is visualized in the dashboar
 
 The UI is designed with a fintech-inspired dark theme.
 
-Features include:
-- Smooth fade-in animation  
-- Hover glow effects  
-- Risk gauge visualization  
-- Animated progress loader  
-- Pulse alert for fraud detection  
-- Clean dashboard layout  
+### Key Features:
 
-The idea was to make it feel like a real enterprise security monitoring tool rather than a simple ML demo.
+- Clean dashboard layout  
+- Interactive form-based input  
+- Real-time fraud probability display  
+- Risk progress bar visualization  
+- Clear alert status (Secure / High Risk)  
+
+The goal was to create a system that feels closer to an enterprise monitoring tool rather than a basic ML demo.
 
 ---
 
@@ -66,18 +70,18 @@ The idea was to make it feel like a real enterprise security monitoring tool rat
 - Streamlit  
 - Scikit-learn  
 - Imbalanced-learn (SMOTE)  
-- Pandas / NumPy  
-- Joblib  
+- Pandas  
+- NumPy  
 
 ---
 
 ## 📂 Project Structure
 
 ```
-FraudSheild-AI
+FraudShield-AI
 │
 ├── fraud_detector.py
-├── fraud_model.pkl
+├── credit_card_fraud_dataset_modified - credit_card_fraud_dataset_modified.csv
 ├── requirements.txt
 └── README.md
 ```
@@ -86,18 +90,39 @@ FraudSheild-AI
 
 ## ▶ How to Run Locally
 
-```bash
+1. Clone the repository:
+```
+git clone https://github.com/Prabhat-190/FraudSheild-AI.git
+```
+
+2. Install dependencies:
+```
 pip install -r requirements.txt
+```
+
+3. Run the application:
+```
 streamlit run fraud_detector.py
 ```
 
 ---
 
+## 📊 Sample Output
 
+The model returns:
 
-<img width="1469" height="819" alt="Screenshot 2026-02-24 at 4 14 53 PM" src="https://github.com/user-attachments/assets/e35eb606-0b4f-45fc-a54a-b7bc50625c9b" />
+- Fraud Probability (%)
+- Risk Status (Secure / High Risk)
+- Visual risk progress indicator
 
- 
+---
+
+## 🚀 Future Improvements
+
+- Threshold optimization using Precision-Recall tradeoff  
+- ROC-AUC performance visualization  
+- Real-world dataset integration  
+- API-based deployment architecture  
 
 ---
 
