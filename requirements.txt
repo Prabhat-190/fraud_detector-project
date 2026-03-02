@@ -1,6 +1,6 @@
 streamlit
 pandas
-scikit-learn>=1.4.2
-imbalanced-learn>=0.12.0
+scikit-learn
+imbalanced-learn
 joblib
-ccxt
+requests
