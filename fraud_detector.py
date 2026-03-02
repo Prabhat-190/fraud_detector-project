@@ -1,10 +1,10 @@
-# fraud_detector.py (fixed safe version)
+
 import os
 import time
 import pandas as pd
 import streamlit as st
 
-# ML libs
+
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.compose import ColumnTransformer
@@ -13,14 +13,14 @@ from imblearn.over_sampling import SMOTE
 from imblearn.pipeline import Pipeline as ImbPipeline
 import joblib
 
-# Optional: live exchange (wrapped safely)
+
 try:
     import ccxt
     CCXT_AVAILABLE = True
 except Exception:
     CCXT_AVAILABLE = False
 
-# ============ CONFIG ============
+# ==== CONFIG =====
 # Consider renaming the CSV in your repo to a simpler name (recommended)
 MODEL_FILE = "fraud_model.pkl"
 DATA_FILE = "credit_card_fraud_dataset_modified - credit_card_fraud_dataset_modified.csv"
