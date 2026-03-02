@@ -15,13 +15,15 @@ import joblib
 try:
     import ccxt
     CCXT_AVAILABLE = True
-except Exception:
+except:
     CCXT_AVAILABLE = False
 
-MODEL_FILE = "fraud_model_final_v12.pkl"
+MODEL_FILE = "fraud_model_final_v13.pkl"
+
+# ---------------- DATA GENERATION ---------------- #
 
 def generate_dynamic_dataset():
-    n = 20000
+    n = 25000
     amounts = np.random.uniform(5.0, 80000.0, size=n)
     times = np.random.randint(0, 86400, size=n)
     ages = np.random.randint(18, 85, size=n)
@@ -70,14 +72,17 @@ def build_model():
     X = df.drop("IsFraud", axis=1)
     y = df["IsFraud"]
 
-    X_train, _, y_train, _ = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
+    X_train, _, y_train, _ = train_test_split(
+        X, y, test_size=0.2, random_state=42, stratify=y
+    )
 
     pipeline = Pipeline([
         ("preprocessor", preprocessor),
-        ("classifier", RandomForestClassifier(n_estimators=500, min_samples_split=5))
+        ("classifier", RandomForestClassifier(n_estimators=600, min_samples_split=5))
     ])
 
     pipeline.fit(X_train, y_train)
+
     try:
         joblib.dump(pipeline, MODEL_FILE)
     except:
@@ -93,6 +98,8 @@ def get_model():
         except:
             pass
     return build_model()
+
+# ---------------- RISK ENGINE ---------------- #
 
 def calculate_realtime_risk(input_df, model):
     base_prob = model.predict_proba(input_df)[0][1]
@@ -124,6 +131,8 @@ def calculate_realtime_risk(input_df, model):
 
     return np.clip(final, 0, 1)
 
+# ---------------- LIVE TRADE ---------------- #
+
 def fetch_live_trade(symbol="BTC/USD"):
     if not CCXT_AVAILABLE:
         return None
@@ -149,21 +158,48 @@ def fetch_live_trade(symbol="BTC/USD"):
     except:
         return None
 
+# ---------------- UI ---------------- #
+
 def main():
     st.set_page_config(page_title="FRAUD_SHIELD_ENTERPRISE", page_icon="🛡️", layout="wide")
 
+    if "risk_history" not in st.session_state:
+        st.session_state.risk_history = []
+
     st.markdown("""
     <style>
-    .stApp { background-color: #060a11; color: white; }
+    .stApp {
+        background: linear-gradient(135deg,#05070d,#0f2027,#203a43);
+        color: white;
+    }
     .title {
-        font-size: 42px;
+        font-size: 48px;
         font-weight: 900;
-        background: linear-gradient(90deg,#00ffcc,#00b3ff);
+        background: linear-gradient(90deg,#00ffcc,#00b3ff,#6a00ff);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
     }
+    .stButton>button {
+        background: linear-gradient(90deg,#00ffcc,#00b3ff);
+        color: black;
+        border-radius: 12px;
+        font-weight: bold;
+        height: 45px;
+        transition: all 0.3s ease;
+        border: none;
+    }
+    .stButton>button:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 20px rgba(0,255,200,0.6);
+    }
     .stProgress > div > div > div > div {
         background-image: linear-gradient(to right,#00ffcc,#00b3ff);
+    }
+    div[data-testid="stMetric"] {
+        background: rgba(255,255,255,0.05);
+        padding: 15px;
+        border-radius: 10px;
+        backdrop-filter: blur(12px);
     }
     </style>
     """, unsafe_allow_html=True)
@@ -175,6 +211,8 @@ def main():
     model = get_model()
 
     tab1, tab2 = st.tabs(["Manual Scan", "Live Network"])
+
+    # -------- Manual -------- #
 
     with tab1:
         col1, col2 = st.columns([0.4, 0.6])
@@ -192,27 +230,54 @@ def main():
                 df_input = pd.DataFrame([[amt, int(time.time()%86400), age, loc, cat]],
                     columns=["Amount","Time","CardHolderAge","Location","MerchantCategory"])
                 risk = calculate_realtime_risk(df_input, model)
+
+                st.session_state.risk_history.append(risk)
+                if len(st.session_state.risk_history) > 60:
+                    st.session_state.risk_history.pop(0)
+
                 st.progress(risk)
+
                 if risk > 0.6:
                     st.error(f"High Risk {risk*100:.2f}%")
                 else:
                     st.success(f"Secure {risk*100:.2f}%")
 
+                chart_df = pd.DataFrame({"Risk": st.session_state.risk_history})
+                st.line_chart(chart_df)
+
+    # -------- Live -------- #
+
     with tab2:
         active = st.toggle("Activate Live Monitoring")
+
+        chart_placeholder = st.empty()
+        metrics_placeholder = st.empty()
+
         if active:
             while active:
                 trade = fetch_live_trade()
+
                 if trade:
                     df_input = pd.DataFrame([[trade["Amount"], trade["Time"], trade["CardHolderAge"], trade["Location"], trade["MerchantCategory"]]],
                         columns=["Amount","Time","CardHolderAge","Location","MerchantCategory"])
+
                     risk = calculate_realtime_risk(df_input, model)
-                    col1, col2, col3 = st.columns(3)
-                    col1.metric("USD Value", f"${trade['Amount']:,.2f}")
-                    col2.metric("BTC Price", f"${trade['Price']:,.2f}")
-                    col3.metric("Risk", f"{risk*100:.2f}%")
-                    st.progress(risk)
-                time.sleep(1.5)
+
+                    st.session_state.risk_history.append(risk)
+                    if len(st.session_state.risk_history) > 60:
+                        st.session_state.risk_history.pop(0)
+
+                    with metrics_placeholder.container():
+                        col1, col2, col3 = st.columns(3)
+                        col1.metric("USD Value", f"${trade['Amount']:,.2f}")
+                        col2.metric("BTC Price", f"${trade['Price']:,.2f}")
+                        col3.metric("Risk", f"{risk*100:.2f}%")
+                        st.progress(risk)
+
+                    chart_df = pd.DataFrame({"Risk": st.session_state.risk_history})
+                    chart_placeholder.line_chart(chart_df)
+
+                time.sleep(1)
 
 if __name__ == "__main__":
     main()
