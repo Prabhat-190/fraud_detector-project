@@ -1,127 +1,51 @@
-# 🏦 FRAUD_SHIELD / AUDIT_PRO  
-AI-Based Transaction Risk Detection System  
+🛡️ Fraud Shield Enterprise
+
+A real-time fraud risk intelligence dashboard built using Machine Learning and live crypto market data.
+
+🌐 Live App:
+https://fraudsheild-ai-4ruti3ugr9qcuafvmdxekm.streamlit.app/#anomalous-volatility-signature<img width="1468" height="818" alt="Screenshot 2026-03-02 at 11 10 17 PM" src="https://github.com/user-attachments/assets/7cddf3df-7a04-4e13-a537-5b9065beee73" />
+<img width="1467" height="832" alt="Screenshot 2026-03-02 at 11 10 04 PM" src="https://github.com/user-attachments/assets/18f11c47-c75b-4bf4-9f10-5599b25ae057" />
 
 
----
+📌 Overview
 
-## 📌 About This Project
+Fraud Shield Enterprise simulates how modern fintech systems evaluate transaction risk.
+It combines a trained Random Forest model with a dynamic risk scoring engine and live BTC/USD market data.
 
-FRAUD_SHIELD is a machine learning based fraud detection system that analyzes transaction details and predicts whether a transaction is likely to be fraudulent or legitimate.
+Instead of static rule-based outputs, the system generates a continuously changing risk score (0–100%) based on:
 
-The objective of this project was to simulate a real-world fintech risk monitoring dashboard using a structured ML pipeline and a professional user interface.
+Transaction amount
 
-It combines:
+Time of transaction
 
-- Backend ML engineering  
-- Data preprocessing & imbalance handling  
-- Interactive Streamlit dashboard  
+Cardholder age
 
----
+Location
 
-## 🧠 How It Works
+Merchant category
 
-The system follows a complete ML workflow:
+Live crypto trade activity
 
-- Data cleaning and preprocessing  
-- Handling missing values  
-- Encoding categorical features  
-- Scaling numerical features  
-- Handling class imbalance using **SMOTE**  
-- Training a **Random Forest classifier**  
-- Probability-based fraud scoring  
+The result is a real-time risk monitoring interface that behaves like a lightweight fraud detection engine.
 
-The entire preprocessing and modeling logic is bundled inside a single pipeline using `ImbPipeline`, ensuring consistent transformations during prediction.
+⚙️ Features
 
----
+Machine Learning fraud probability model
 
-## ⚙️ Model Details
+Dynamic real-time risk adjustment layer
 
-- **Algorithm:** Random Forest Classifier  
-- **Imbalance Handling:** SMOTE (Synthetic Minority Oversampling)  
-- **Train/Test Split:** Stratified sampling  
-- **Output:** Fraud probability score  
-- **Decision Logic:** Threshold-based classification  
+Live BTC/USD trade integration via Kraken (CCXT)
 
-The system outputs a fraud probability which is visualized as a risk index inside the dashboard.
+Auto-updating risk graph
 
----
+Manual transaction simulation
 
-## 🎨 User Interface
+Enterprise-style dark UI
 
-The UI is designed with a fintech-inspired dark theme.
+🛠 Tech Stack
 
-### Key Features:
+Python • Streamlit • Scikit-learn • Pandas • NumPy • CCXT • Joblib
 
-- Clean dashboard layout  
-- Interactive form-based input  
-- Real-time fraud probability display  
-- Risk progress bar visualization  
-- Clear alert status (Secure / High Risk)  
-
-The goal was to create a system that feels closer to an enterprise monitoring tool rather than a basic ML demo.
-
----
-
-## 🛠 Tech Stack
-
-- Python  
-- Streamlit  
-- Scikit-learn  
-- Imbalanced-learn (SMOTE)  
-- Pandas  
-- NumPy  
-
----
-
-## 📂 Project Structure
-
-```
-FraudShield-AI
-│
-├── fraud_detector.py
-├── credit_card_fraud_dataset_modified - credit_card_fraud_dataset_modified.csv
-├── requirements.txt
-└── README.md
-```
-
----
-
-## ▶ How to Run Locally
-
-1. Clone the repository:
-```
-git clone https://github.com/Prabhat-190/FraudSheild-AI.git
-```
-
-2. Install dependencies:
-```
+▶ Run Locally
 pip install -r requirements.txt
-```
-
-3. Run the application:
-```
 streamlit run fraud_detector.py
-```
-
----
-
-## 📊 Sample Output
-
-The model returns:
-
-- Fraud Probability (%)
-- Risk Status (Secure / High Risk)
-- Visual risk progress indicator
-
----
-
-## 🚀 Future Improvements
-
-- Threshold optimization using Precision-Recall tradeoff  
-- ROC-AUC performance visualization  
-- Real-world dataset integration  
-- API-based deployment architecture  
-
----
-
-If you found this project interesting, feel free to ⭐ the repository.
