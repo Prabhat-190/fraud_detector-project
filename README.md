@@ -1,8 +1,6 @@
 # 🏦 FRAUD_SHIELD / AUDIT_PRO  
 AI-Based Transaction Risk Detection System  
 
-🌐 **Live Application:**  
-👉 https://frauddetectorpy-hx8n54x28xuyzes4jrei9b.streamlit.app/
 
 ---
 
