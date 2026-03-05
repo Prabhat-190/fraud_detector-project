@@ -20,7 +20,7 @@ except:
 
 MODEL_FILE = "fraud_model_final_v13.pkl"
 
-# ---------------- DATA GENERATION ---------------- #
+
 
 def generate_dynamic_dataset():
     n = 25000
@@ -99,8 +99,6 @@ def get_model():
             pass
     return build_model()
 
-# ---------------- RISK ENGINE ---------------- #
-
 def calculate_realtime_risk(input_df, model):
     base_prob = model.predict_proba(input_df)[0][1]
 
@@ -131,8 +129,6 @@ def calculate_realtime_risk(input_df, model):
 
     return np.clip(final, 0, 1)
 
-# ---------------- LIVE TRADE ---------------- #
-
 def fetch_live_trade(symbol="BTC/USD"):
     if not CCXT_AVAILABLE:
         return None
@@ -157,8 +153,6 @@ def fetch_live_trade(symbol="BTC/USD"):
         }
     except:
         return None
-
-# ---------------- UI ---------------- #
 
 def main():
     st.set_page_config(page_title="FRAUD_SHIELD_ENTERPRISE", page_icon="🛡️", layout="wide")
@@ -212,8 +206,6 @@ def main():
 
     tab1, tab2 = st.tabs(["Manual Scan", "Live Network"])
 
-    # -------- Manual -------- #
-
     with tab1:
         col1, col2 = st.columns([0.4, 0.6])
 
@@ -244,8 +236,6 @@ def main():
 
                 chart_df = pd.DataFrame({"Risk": st.session_state.risk_history})
                 st.line_chart(chart_df)
-
-    # -------- Live -------- #
 
     with tab2:
         active = st.toggle("Activate Live Monitoring")
