@@ -1,10 +1,10 @@
 import os
 import time
-import datetime
 import random
 import pandas as pd
 import numpy as np
 import streamlit as st
+from streamlit_autorefresh import st_autorefresh
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.compose import ColumnTransformer
@@ -19,8 +19,6 @@ except:
     CCXT_AVAILABLE = False
 
 MODEL_FILE = "fraud_model_final_v13.pkl"
-
-
 
 def generate_dynamic_dataset():
     n = 25000
@@ -134,22 +132,17 @@ def fetch_live_trade(symbol="BTC/USD"):
         return None
     try:
         exchange = ccxt.kraken()
-        trades = exchange.fetch_trades(symbol, limit=1)
-        if not trades:
-            return None
-
-        t = trades[0]
-        usd_value = t["price"] * t["amount"]
+        ticker = exchange.fetch_ticker(symbol)
+        price = ticker["last"]
+        usd_value = float(price)
 
         return {
-            "Amount": float(usd_value),
+            "Amount": usd_value,
             "Time": int(time.time() % 86400),
             "CardHolderAge": random.randint(18, 75),
             "Location": random.choice(["California", "New York", "London", "Online", "Tokyo"]),
             "MerchantCategory": "Crypto",
-            "Side": t["side"].upper(),
-            "CryptoAmount": t["amount"],
-            "Price": t["price"]
+            "Price": price
         }
     except:
         return None
@@ -162,39 +155,10 @@ def main():
 
     st.markdown("""
     <style>
-    .stApp {
-        background: linear-gradient(135deg,#05070d,#0f2027,#203a43);
-        color: white;
-    }
-    .title {
-        font-size: 48px;
-        font-weight: 900;
-        background: linear-gradient(90deg,#00ffcc,#00b3ff,#6a00ff);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-    }
-    .stButton>button {
-        background: linear-gradient(90deg,#00ffcc,#00b3ff);
-        color: black;
-        border-radius: 12px;
-        font-weight: bold;
-        height: 45px;
-        transition: all 0.3s ease;
-        border: none;
-    }
-    .stButton>button:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 10px 20px rgba(0,255,200,0.6);
-    }
-    .stProgress > div > div > div > div {
-        background-image: linear-gradient(to right,#00ffcc,#00b3ff);
-    }
-    div[data-testid="stMetric"] {
-        background: rgba(255,255,255,0.05);
-        padding: 15px;
-        border-radius: 10px;
-        backdrop-filter: blur(12px);
-    }
+    .stApp {background: linear-gradient(135deg,#05070d,#0f2027,#203a43);color:white;}
+    .title {font-size:48px;font-weight:900;background:linear-gradient(90deg,#00ffcc,#00b3ff,#6a00ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+    .stButton>button {background:linear-gradient(90deg,#00ffcc,#00b3ff);color:black;border-radius:12px;font-weight:bold;height:45px;border:none;}
+    .stProgress > div > div > div > div {background-image:linear-gradient(to right,#00ffcc,#00b3ff);}
     </style>
     """, unsafe_allow_html=True)
 
@@ -207,67 +171,64 @@ def main():
     tab1, tab2 = st.tabs(["Manual Scan", "Live Network"])
 
     with tab1:
-        col1, col2 = st.columns([0.4, 0.6])
+        col1, col2 = st.columns([0.4,0.6])
 
         with col1:
             with st.form("form"):
                 amt = st.number_input("Amount", value=250.0)
-                age = st.slider("Age", 18, 95, 30)
-                loc = st.selectbox("Location", ["California","New York","London","Online","Tokyo"])
-                cat = st.selectbox("Category", ["Retail","Electronics","Crypto","Entertainment"])
+                age = st.slider("Age",18,95,30)
+                loc = st.selectbox("Location",["California","New York","London","Online","Tokyo"])
+                cat = st.selectbox("Category",["Retail","Electronics","Crypto","Entertainment"])
                 submit = st.form_submit_button("Analyze")
 
         with col2:
             if submit:
-                df_input = pd.DataFrame([[amt, int(time.time()%86400), age, loc, cat]],
-                    columns=["Amount","Time","CardHolderAge","Location","MerchantCategory"])
-                risk = calculate_realtime_risk(df_input, model)
+                df_input = pd.DataFrame([[amt,int(time.time()%86400),age,loc,cat]],
+                columns=["Amount","Time","CardHolderAge","Location","MerchantCategory"])
+
+                risk = calculate_realtime_risk(df_input,model)
 
                 st.session_state.risk_history.append(risk)
-                if len(st.session_state.risk_history) > 60:
+                if len(st.session_state.risk_history)>60:
                     st.session_state.risk_history.pop(0)
 
                 st.progress(risk)
 
-                if risk > 0.6:
+                if risk>0.6:
                     st.error(f"High Risk {risk*100:.2f}%")
                 else:
                     st.success(f"Secure {risk*100:.2f}%")
 
-                chart_df = pd.DataFrame({"Risk": st.session_state.risk_history})
+                chart_df=pd.DataFrame({"Risk":st.session_state.risk_history})
                 st.line_chart(chart_df)
 
     with tab2:
         active = st.toggle("Activate Live Monitoring")
 
-        chart_placeholder = st.empty()
-        metrics_placeholder = st.empty()
-
         if active:
-            while active:
-                trade = fetch_live_trade()
+            st_autorefresh(interval=1000,key="live")
 
-                if trade:
-                    df_input = pd.DataFrame([[trade["Amount"], trade["Time"], trade["CardHolderAge"], trade["Location"], trade["MerchantCategory"]]],
-                        columns=["Amount","Time","CardHolderAge","Location","MerchantCategory"])
+            trade = fetch_live_trade()
 
-                    risk = calculate_realtime_risk(df_input, model)
+            if trade:
+                df_input=pd.DataFrame([[trade["Amount"],trade["Time"],trade["CardHolderAge"],trade["Location"],trade["MerchantCategory"]]],
+                columns=["Amount","Time","CardHolderAge","Location","MerchantCategory"])
 
-                    st.session_state.risk_history.append(risk)
-                    if len(st.session_state.risk_history) > 60:
-                        st.session_state.risk_history.pop(0)
+                risk=calculate_realtime_risk(df_input,model)
 
-                    with metrics_placeholder.container():
-                        col1, col2, col3 = st.columns(3)
-                        col1.metric("USD Value", f"${trade['Amount']:,.2f}")
-                        col2.metric("BTC Price", f"${trade['Price']:,.2f}")
-                        col3.metric("Risk", f"{risk*100:.2f}%")
-                        st.progress(risk)
+                st.session_state.risk_history.append(risk)
+                if len(st.session_state.risk_history)>60:
+                    st.session_state.risk_history.pop(0)
 
-                    chart_df = pd.DataFrame({"Risk": st.session_state.risk_history})
-                    chart_placeholder.line_chart(chart_df)
+                col1,col2,col3=st.columns(3)
+                col1.metric("USD Value",f"${trade['Amount']:,.2f}")
+                col2.metric("BTC Price",f"${trade['Price']:,.2f}")
+                col3.metric("Risk",f"{risk*100:.2f}%")
 
-                time.sleep(1)
+                st.progress(risk)
 
-if __name__ == "__main__":
+                chart_df=pd.DataFrame({"Risk":st.session_state.risk_history})
+                st.line_chart(chart_df)
+
+if __name__=="__main__":
     main()
