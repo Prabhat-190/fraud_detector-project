@@ -19,7 +19,7 @@ try:
 except Exception:
     CCXT_AVAILABLE = False
 
-MODEL_FILE = "fraud_model_v19.pkl"
+MODEL_FILE = "fraud_model_v20.pkl"
 
 def generate_fluid_data():
     np.random.seed(42)
@@ -121,6 +121,8 @@ def main():
         st.session_state.live_history = pd.DataFrame(columns=["Risk"])
     if "alert_ledger" not in st.session_state:
         st.session_state.alert_ledger = pd.DataFrame(columns=["Time", "Amount", "Location", "Category", "Risk", "Status"])
+    if "last_manual_risk" not in st.session_state:
+        st.session_state.last_manual_risk = None
         
     st.markdown("""
     <style>
@@ -181,22 +183,28 @@ def main():
             if sub:
                 df_in = pd.DataFrame([[amt, int(time.time()%86400), age, loc, cat]], columns=["Amount", "Time", "CardHolderAge", "Location", "MerchantCategory"])
                 risk = model.predict_proba(df_in)[0][1]
-                
+                st.session_state.last_manual_risk = risk
                 new_row = pd.DataFrame({"Risk": [risk]})
                 st.session_state.manual_history = pd.concat([st.session_state.manual_history, new_row], ignore_index=True).tail(30)
                 
-                if risk >= 0.5:
-                    st.markdown(f'<div class="alert-high">High Risk {risk*100:.2f}%</div>', unsafe_allow_html=True)
+            risk_val = st.session_state.last_manual_risk
+            
+            if risk_val is not None:
+                if risk_val >= 0.5:
+                    st.markdown(f'<div class="alert-high">High Risk {risk_val*100:.2f}%</div>', unsafe_allow_html=True)
                 else:
-                    st.markdown(f'<div class="alert-low">Low Risk {risk*100:.2f}%</div>', unsafe_allow_html=True)
-                
-                g_col1, g_col2 = st.columns([1, 1.5])
-                with g_col1:
-                    st.plotly_chart(create_gauge(risk), use_container_width=True, config={'displayModeBar': False})
-                with g_col2:
-                    st.line_chart(st.session_state.manual_history, height=250)
+                    st.markdown(f'<div class="alert-low">Low Risk {risk_val*100:.2f}%</div>', unsafe_allow_html=True)
             else:
-                st.plotly_chart(create_gauge(0.0), use_container_width=True, config={'displayModeBar': False})
+                st.markdown(f'<div class="alert-low" style="color:#8a9ba8; border-color:#1c2b3a; background:transparent;">Awaiting input parameters...</div>', unsafe_allow_html=True)
+
+            g_col1, g_col2 = st.columns([1, 1.5])
+            with g_col1:
+                st.plotly_chart(create_gauge(risk_val if risk_val else 0.0), use_container_width=True, config={'displayModeBar': False})
+            with g_col2:
+                if not st.session_state.manual_history.empty:
+                    st.line_chart(st.session_state.manual_history, height=250)
+                else:
+                    st.line_chart([0], height=250)
 
     with tab2:
         is_live = st.toggle("Activate Live Monitoring")
