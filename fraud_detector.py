@@ -225,7 +225,8 @@ def main():
 
             g_col1, g_col2 = st.columns([1, 1.5])
             with g_col1:
-                st.plotly_chart(create_gauge(risk_val if risk_val else 0.0), use_container_width=True, config={'displayModeBar': False})
+                # ADDED UNIQUE KEY HERE
+                st.plotly_chart(create_gauge(risk_val if risk_val else 0.0), use_container_width=True, config={'displayModeBar': False}, key="manual_gauge")
             with g_col2:
                 if not st.session_state.manual_history.empty:
                     st.line_chart(st.session_state.manual_history, height=250)
@@ -295,7 +296,8 @@ def main():
                 
                 v1, v2 = st.columns([1, 2])
                 with v1:
-                    st.plotly_chart(create_gauge(0.0), use_container_width=True, config={'displayModeBar': False})
+                    # ADDED UNIQUE KEY HERE
+                    st.plotly_chart(create_gauge(0.0), use_container_width=True, config={'displayModeBar': False}, key="live_gauge_inactive")
                 with v2:
                     st.line_chart(st.session_state.live_history if not st.session_state.live_history.empty else pd.DataFrame({"Risk": [0]}), height=250)
                     
