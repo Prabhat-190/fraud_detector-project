@@ -19,7 +19,7 @@ try:
 except Exception:
     CCXT_AVAILABLE = False
 
-MODEL_FILE = "fraud_model_v21.pkl"
+MODEL_FILE = "fraud_model_v22.pkl"
 
 def generate_fluid_data():
     np.random.seed(42)
@@ -146,28 +146,33 @@ def main():
     
     .stProgress > div > div > div > div { background-color: #00ffd0; }
     
-    .stButton>button { 
-        background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
+    div[data-testid="stFormSubmitButton"] > button, div[data-testid="stButton"] > button { 
+        background: linear-gradient(180deg, #ff4b4b 0%, #b91c1c 100%) !important;
         color: #ffffff !important;
-        border: none;
-        border-radius: 6px;
-        font-weight: 800;
-        font-size: 16px;
-        width: 100%;
-        padding: 12px 0;
-        transition: all 0.15s ease-in-out;
-        box-shadow: 0 4px 0 #7f1d1d, 0 5px 10px rgba(0,0,0,0.3);
-        text-transform: uppercase;
-        letter-spacing: 1.5px;
+        border: none !important;
+        border-radius: 8px !important;
+        width: 100% !important;
+        padding: 14px 0 !important;
+        transition: all 0.1s ease-in-out !important;
+        box-shadow: 0 6px 0 #7f1d1d, 0 8px 15px rgba(0,0,0,0.4) !important;
     }
-    .stButton>button:hover { 
-        transform: translateY(2px);
-        box-shadow: 0 2px 0 #7f1d1d, 0 3px 6px rgba(0,0,0,0.3);
-        background: linear-gradient(135deg, #f87171 0%, #dc2626 100%);
+    div[data-testid="stFormSubmitButton"] > button:hover, div[data-testid="stButton"] > button:hover { 
+        transform: translateY(2px) !important;
+        box-shadow: 0 4px 0 #7f1d1d, 0 5px 10px rgba(0,0,0,0.4) !important;
+        background: linear-gradient(180deg, #ff6b6b 0%, #dc2626 100%) !important;
     }
-    .stButton>button:active { 
-        transform: translateY(4px);
-        box-shadow: 0 0 0 #7f1d1d, 0 1px 2px rgba(0,0,0,0.3);
+    div[data-testid="stFormSubmitButton"] > button:active, div[data-testid="stButton"] > button:active { 
+        transform: translateY(6px) !important;
+        box-shadow: 0 0 0 #7f1d1d, 0 2px 5px rgba(0,0,0,0.4) !important;
+        background: #b91c1c !important;
+    }
+    div[data-testid="stFormSubmitButton"] p, div[data-testid="stButton"] p {
+        font-weight: 900 !important;
+        font-size: 16px !important;
+        color: white !important;
+        text-transform: uppercase !important;
+        letter-spacing: 2px !important;
+        margin: 0 !important;
     }
     
     div[data-testid="stSlider"] > div > div > div > div { background-color: #ef4444 !important; }
