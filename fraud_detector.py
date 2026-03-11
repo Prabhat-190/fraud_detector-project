@@ -19,7 +19,7 @@ try:
 except Exception:
     CCXT_AVAILABLE = False
 
-MODEL_FILE = "fraud_model_v20.pkl"
+MODEL_FILE = "fraud_model_v21.pkl"
 
 def generate_fluid_data():
     np.random.seed(42)
@@ -146,8 +146,29 @@ def main():
     
     .stProgress > div > div > div > div { background-color: #00ffd0; }
     
-    .stButton>button { background-color: transparent; border: 1px solid #ef4444; color: #ef4444; border-radius: 4px; font-weight: 600; width: 100%; transition: 0.2s; }
-    .stButton>button:hover { background-color: #ef4444; color: #ffffff; }
+    .stButton>button { 
+        background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
+        color: #ffffff !important;
+        border: none;
+        border-radius: 6px;
+        font-weight: 800;
+        font-size: 16px;
+        width: 100%;
+        padding: 12px 0;
+        transition: all 0.15s ease-in-out;
+        box-shadow: 0 4px 0 #7f1d1d, 0 5px 10px rgba(0,0,0,0.3);
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+    }
+    .stButton>button:hover { 
+        transform: translateY(2px);
+        box-shadow: 0 2px 0 #7f1d1d, 0 3px 6px rgba(0,0,0,0.3);
+        background: linear-gradient(135deg, #f87171 0%, #dc2626 100%);
+    }
+    .stButton>button:active { 
+        transform: translateY(4px);
+        box-shadow: 0 0 0 #7f1d1d, 0 1px 2px rgba(0,0,0,0.3);
+    }
     
     div[data-testid="stSlider"] > div > div > div > div { background-color: #ef4444 !important; }
     </style>
@@ -176,7 +197,7 @@ def main():
                 loc = st.selectbox("Location", ["California", "New York", "London", "Online", "Tokyo"])
                 cat = st.selectbox("Category", ["Crypto", "Retail", "Electronics", "Entertainment"])
                 st.markdown("<br>", unsafe_allow_html=True)
-                sub = st.form_submit_button("Analyze")
+                sub = st.form_submit_button("ANALYZE RISK")
             st.markdown('</div>', unsafe_allow_html=True)
             
         with c2:
@@ -209,9 +230,7 @@ def main():
     with tab2:
         is_live = st.toggle("Activate Live Monitoring")
         
-        metric_space = st.empty()
-        visual_space = st.empty()
-        table_space = st.empty()
+        live_placeholder = st.empty()
         
         if is_live:
             while is_live:
@@ -240,38 +259,42 @@ def main():
                 }])
                 st.session_state.alert_ledger = pd.concat([new_ledger_row, st.session_state.alert_ledger], ignore_index=True).head(20)
                 
-                with metric_space.container():
+                with live_placeholder.container():
                     m1, m2, m3 = st.columns(3)
                     m1.markdown(f'<div class="metric-card"><div class="metric-label">USD Value</div><p class="metric-val">${val:,.2f}</p></div>', unsafe_allow_html=True)
                     m2.markdown(f'<div class="metric-card"><div class="metric-label">BTC Price</div><p class="metric-val">${btc:,.2f}</p></div>', unsafe_allow_html=True)
                     m3.markdown(f'<div class="metric-card"><div class="metric-label">Risk</div><p class="metric-val">{live_risk*100:.2f}%</p></div>', unsafe_allow_html=True)
-                
-                with visual_space.container():
+                    
                     v1, v2 = st.columns([1, 2])
                     with v1:
-                        st.plotly_chart(create_gauge(live_risk), use_container_width=True, config={'displayModeBar': False})
+                        dynamic_key = f"gauge_{int(time.time() * 1000)}"
+                        st.plotly_chart(create_gauge(live_risk), use_container_width=True, config={'displayModeBar': False}, key=dynamic_key)
                     with v2:
                         st.line_chart(st.session_state.live_history, height=250)
-                
-                with table_space.container():
-                    st.markdown('<div class="input-card"><h3 style="color:#00ffd0; margin-top:0;">Fraud Alert Dashboard (Last 20)</h3></div>', unsafe_allow_html=True)
-                    st.dataframe(st.session_state.alert_ledger, use_container_width=True, hide_index=True)
+                        
+                    st.markdown('<div class="input-card"><h3 style="color:#00ffd0; margin-top:0; font-size:18px;">Fraud Alert Dashboard (Last 20)</h3></div>', unsafe_allow_html=True)
+                    
+                    styled_ledger = st.session_state.alert_ledger.style.applymap(
+                        lambda v: 'color: #ef4444; font-weight: bold;' if v == '🚨 BLOCKED' else ('color: #00ffd0; font-weight: bold;' if v == '✅ SECURE' else ''),
+                        subset=['Status']
+                    )
+                    st.dataframe(styled_ledger, use_container_width=True, hide_index=True)
                 
                 time.sleep(1.5)
         else:
-            with metric_space.container():
+            with live_placeholder.container():
                 m1, m2, m3 = st.columns(3)
                 m1.markdown('<div class="metric-card"><div class="metric-label">USD Value</div><p class="metric-val">$0.00</p></div>', unsafe_allow_html=True)
                 m2.markdown('<div class="metric-card"><div class="metric-label">BTC Price</div><p class="metric-val">$0.00</p></div>', unsafe_allow_html=True)
                 m3.markdown('<div class="metric-card"><div class="metric-label">Risk</div><p class="metric-val">0.00%</p></div>', unsafe_allow_html=True)
-            with visual_space.container():
+                
                 v1, v2 = st.columns([1, 2])
                 with v1:
                     st.plotly_chart(create_gauge(0.0), use_container_width=True, config={'displayModeBar': False})
                 with v2:
                     st.line_chart(st.session_state.live_history if not st.session_state.live_history.empty else pd.DataFrame({"Risk": [0]}), height=250)
-            with table_space.container():
-                st.markdown('<div class="input-card"><h3 style="color:#00ffd0; margin-top:0;">Fraud Alert Dashboard (Last 20)</h3></div>', unsafe_allow_html=True)
+                    
+                st.markdown('<div class="input-card"><h3 style="color:#00ffd0; margin-top:0; font-size:18px;">Fraud Alert Dashboard (Last 20)</h3></div>', unsafe_allow_html=True)
                 st.dataframe(st.session_state.alert_ledger, use_container_width=True, hide_index=True)
 
 if __name__ == "__main__":
