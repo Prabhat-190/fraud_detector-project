@@ -1,9 +1,11 @@
 import os
 import time
+import datetime
 import random
 import numpy as np
 import pandas as pd
 import streamlit as st
+import plotly.graph_objects as go
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.compose import ColumnTransformer
@@ -17,7 +19,7 @@ try:
 except Exception:
     CCXT_AVAILABLE = False
 
-MODEL_FILE = "fraud_model_v18.pkl"
+MODEL_FILE = "fraud_model_v19.pkl"
 
 def generate_fluid_data():
     np.random.seed(42)
@@ -76,6 +78,40 @@ def get_live_price():
     except Exception:
         return None
 
+def create_gauge(risk_value):
+    color = "#ef4444" if risk_value >= 0.5 else "#00ffd0"
+    fig = go.Figure(go.Indicator(
+        mode="gauge+number",
+        value=risk_value * 100,
+        number={'suffix': "%", 'font': {'color': "#ffffff", 'size': 36}},
+        domain={'x': [0, 1], 'y': [0, 1]},
+        title={'text': "RISK INDEX", 'font': {'color': "#8a9ba8", 'size': 14}},
+        gauge={
+            'axis': {'range': [0, 100], 'tickwidth': 1, 'tickcolor': "#1e2d3d"},
+            'bar': {'color': color},
+            'bgcolor': "#121d28",
+            'borderwidth': 2,
+            'bordercolor': "#1c2b3a",
+            'steps': [
+                {'range': [0, 50], 'color': "rgba(0, 255, 208, 0.05)"},
+                {'range': [50, 100], 'color': "rgba(239, 68, 68, 0.05)"}
+            ],
+            'threshold': {
+                'line': {'color': "#ef4444", 'width': 4},
+                'thickness': 0.75,
+                'value': 50
+            }
+        }
+    ))
+    fig.update_layout(
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        font={'color': "#8a9ba8", 'family': "sans-serif"},
+        height=250,
+        margin=dict(l=20, r=20, t=30, b=20)
+    )
+    return fig
+
 def main():
     st.set_page_config(page_title="Fraud Shield", layout="wide")
     
@@ -83,6 +119,8 @@ def main():
         st.session_state.manual_history = pd.DataFrame(columns=["Risk"])
     if "live_history" not in st.session_state:
         st.session_state.live_history = pd.DataFrame(columns=["Risk"])
+    if "alert_ledger" not in st.session_state:
+        st.session_state.alert_ledger = pd.DataFrame(columns=["Time", "Amount", "Location", "Category", "Risk", "Status"])
         
     st.markdown("""
     <style>
@@ -96,7 +134,7 @@ def main():
     div[data-testid="stTabs"] button { color: #8a9ba8 !important; font-size: 16px !important; font-weight: 600 !important; background-color: transparent !important; }
     div[data-testid="stTabs"] button[aria-selected="true"] { color: #ef4444 !important; border-bottom: 2px solid #ef4444 !important; }
     
-    .input-card { background-color: #121d28; padding: 25px; border-radius: 6px; border: 1px solid #1c2b3a; }
+    .input-card { background-color: #121d28; padding: 25px; border-radius: 6px; border: 1px solid #1c2b3a; margin-bottom: 20px;}
     .metric-card { background-color: #121d28; padding: 20px; border-radius: 6px; border: 1px solid #1c2b3a; height: 100%; box-shadow: 0 4px 6px rgba(0,0,0,0.2); }
     .metric-label { color: #8a9ba8; font-size: 13px; font-weight: 500; margin-bottom: 8px; }
     .metric-val { color: #ffffff; font-size: 32px; font-weight: 700; margin: 0; }
@@ -126,12 +164,12 @@ def main():
     tab1, tab2 = st.tabs(["Manual Scan", "Live Network"])
     
     with tab1:
-        c1, c2 = st.columns([1, 2], gap="large")
+        c1, c2 = st.columns([1, 1.8], gap="large")
         
         with c1:
             st.markdown('<div class="input-card">', unsafe_allow_html=True)
             with st.form("manual"):
-                amt = st.number_input("Amount", value=10000000000.00, format="%.2f")
+                amt = st.number_input("Amount", value=10000.00, format="%.2f")
                 age = st.slider("Age", 18, 90, 56)
                 loc = st.selectbox("Location", ["California", "New York", "London", "Online", "Tokyo"])
                 cat = st.selectbox("Category", ["Crypto", "Retail", "Electronics", "Entertainment"])
@@ -147,19 +185,25 @@ def main():
                 new_row = pd.DataFrame({"Risk": [risk]})
                 st.session_state.manual_history = pd.concat([st.session_state.manual_history, new_row], ignore_index=True).tail(30)
                 
-                st.progress(risk)
                 if risk >= 0.5:
                     st.markdown(f'<div class="alert-high">High Risk {risk*100:.2f}%</div>', unsafe_allow_html=True)
                 else:
                     st.markdown(f'<div class="alert-low">Low Risk {risk*100:.2f}%</div>', unsafe_allow_html=True)
-            
-            st.line_chart(st.session_state.manual_history if not st.session_state.manual_history.empty else pd.DataFrame({"Risk": [0]}), height=280)
+                
+                g_col1, g_col2 = st.columns([1, 1.5])
+                with g_col1:
+                    st.plotly_chart(create_gauge(risk), use_container_width=True, config={'displayModeBar': False})
+                with g_col2:
+                    st.line_chart(st.session_state.manual_history, height=250)
+            else:
+                st.plotly_chart(create_gauge(0.0), use_container_width=True, config={'displayModeBar': False})
 
     with tab2:
         is_live = st.toggle("Activate Live Monitoring")
         
-        chart_space = st.empty()
         metric_space = st.empty()
+        visual_space = st.empty()
+        table_space = st.empty()
         
         if is_live:
             while is_live:
@@ -168,14 +212,25 @@ def main():
                     btc = 69113.20 + random.uniform(-20, 20)
                 
                 val = btc * random.uniform(0.001, 0.005)
-                df_live = pd.DataFrame([[val, int(time.time()%86400), random.randint(20,50), "Online", "Crypto"]], columns=["Amount", "Time", "CardHolderAge", "Location", "MerchantCategory"])
+                loc_val = random.choice(["California", "New York", "London", "Online", "Tokyo"])
+                cat_val = random.choice(["Crypto", "Retail", "Electronics"])
+                
+                df_live = pd.DataFrame([[val, int(time.time()%86400), random.randint(20,50), loc_val, cat_val]], columns=["Amount", "Time", "CardHolderAge", "Location", "MerchantCategory"])
                 live_risk = model.predict_proba(df_live)[0][1]
                 
                 new_live_row = pd.DataFrame({"Risk": [live_risk]})
                 st.session_state.live_history = pd.concat([st.session_state.live_history, new_live_row], ignore_index=True).tail(40)
                 
-                with chart_space.container():
-                    st.line_chart(st.session_state.live_history, height=320)
+                status_mark = "🚨 BLOCKED" if live_risk >= 0.5 else "✅ SECURE"
+                new_ledger_row = pd.DataFrame([{
+                    "Time": datetime.datetime.now().strftime("%H:%M:%S"),
+                    "Amount": f"${val:,.2f}",
+                    "Location": loc_val,
+                    "Category": cat_val,
+                    "Risk": f"{live_risk*100:.2f}%",
+                    "Status": status_mark
+                }])
+                st.session_state.alert_ledger = pd.concat([new_ledger_row, st.session_state.alert_ledger], ignore_index=True).head(20)
                 
                 with metric_space.container():
                     m1, m2, m3 = st.columns(3)
@@ -183,15 +238,33 @@ def main():
                     m2.markdown(f'<div class="metric-card"><div class="metric-label">BTC Price</div><p class="metric-val">${btc:,.2f}</p></div>', unsafe_allow_html=True)
                     m3.markdown(f'<div class="metric-card"><div class="metric-label">Risk</div><p class="metric-val">{live_risk*100:.2f}%</p></div>', unsafe_allow_html=True)
                 
+                with visual_space.container():
+                    v1, v2 = st.columns([1, 2])
+                    with v1:
+                        st.plotly_chart(create_gauge(live_risk), use_container_width=True, config={'displayModeBar': False})
+                    with v2:
+                        st.line_chart(st.session_state.live_history, height=250)
+                
+                with table_space.container():
+                    st.markdown('<div class="input-card"><h3 style="color:#00ffd0; margin-top:0;">Fraud Alert Dashboard (Last 20)</h3></div>', unsafe_allow_html=True)
+                    st.dataframe(st.session_state.alert_ledger, use_container_width=True, hide_index=True)
+                
                 time.sleep(1.5)
         else:
-            with chart_space.container():
-                st.line_chart(st.session_state.live_history if not st.session_state.live_history.empty else pd.DataFrame({"Risk": [0]}), height=320)
             with metric_space.container():
                 m1, m2, m3 = st.columns(3)
                 m1.markdown('<div class="metric-card"><div class="metric-label">USD Value</div><p class="metric-val">$0.00</p></div>', unsafe_allow_html=True)
                 m2.markdown('<div class="metric-card"><div class="metric-label">BTC Price</div><p class="metric-val">$0.00</p></div>', unsafe_allow_html=True)
                 m3.markdown('<div class="metric-card"><div class="metric-label">Risk</div><p class="metric-val">0.00%</p></div>', unsafe_allow_html=True)
+            with visual_space.container():
+                v1, v2 = st.columns([1, 2])
+                with v1:
+                    st.plotly_chart(create_gauge(0.0), use_container_width=True, config={'displayModeBar': False})
+                with v2:
+                    st.line_chart(st.session_state.live_history if not st.session_state.live_history.empty else pd.DataFrame({"Risk": [0]}), height=250)
+            with table_space.container():
+                st.markdown('<div class="input-card"><h3 style="color:#00ffd0; margin-top:0;">Fraud Alert Dashboard (Last 20)</h3></div>', unsafe_allow_html=True)
+                st.dataframe(st.session_state.alert_ledger, use_container_width=True, hide_index=True)
 
 if __name__ == "__main__":
     main()
