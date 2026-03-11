@@ -1,51 +1,102 @@
-🛡️ Fraud Shield Enterprise
+# 🛡 Fraud Shield Enterprise
 
-A real-time fraud risk intelligence dashboard built using Machine Learning and live crypto market data.
+Real-Time Transaction Risk Monitoring Dashboard  
 
-🌐 Live App:
-https://fraudsheild-ai-4ruti3ugr9qcuafvmdxekm.streamlit.app/#anomalous-volatility-signature<img width="1468" height="818" alt="Screenshot 2026-03-02 at 11 10 17 PM" src="https://github.com/user-attachments/assets/7cddf3df-7a04-4e13-a537-5b9065beee73" />
-<img width="1467" height="832" alt="Screenshot 2026-03-02 at 11 10 04 PM" src="https://github.com/user-attachments/assets/18f11c47-c75b-4bf4-9f10-5599b25ae057" />
+🔗 **Live Demo:**  
+https://fraudsheild-ai-4ruti3ugr9qcuafvmdxekm.streamlit.app/<img width="1468" height="780" alt="Screenshot 2026-03-11 at 6 13 55 PM" src="https://github.com/user-attachments/assets/f0fef9d2-b8ea-428b-b833-9a1ca468cebe" />
+<img width="1461" height="774" alt="Screenshot 2026-03-11 at 6 14 14 PM" src="https://github.com/user-attachments/assets/595dffa0-03fa-404e-96f5-0c98c045ed21" />
+<img width="1463" height="784" alt="Screenshot 2026-03-11 at 6 14 28 PM" src="https://github.com/user-attachments/assets/7fbbec33-d13d-4645-8591-ec5c38854af4" />
 
 
-📌 Overview
+---
 
-Fraud Shield Enterprise simulates how modern fintech systems evaluate transaction risk.
-It combines a trained Random Forest model with a dynamic risk scoring engine and live BTC/USD market data.
+## About The Project
 
-Instead of static rule-based outputs, the system generates a continuously changing risk score (0–100%) based on:
+Fraud Shield Enterprise is a real-time fraud detection dashboard built using Machine Learning and Streamlit.
 
-Transaction amount
+The goal of this project is to simulate how modern financial security systems monitor transactions and detect suspicious activity instantly. Instead of relying only on static historical data, the system generates dynamic transaction patterns and evaluates risk in real time.
 
-Time of transaction
+The application can analyze manual transactions or monitor a live data stream to estimate the probability of fraud.
 
-Cardholder age
+---
 
-Location
+## Features
 
-Merchant category
+### Manual Transaction Analysis
+Users can manually enter transaction details such as:
 
-Live crypto trade activity
+- Amount
+- Cardholder Age
+- Location
+- Merchant Category
 
-The result is a real-time risk monitoring interface that behaves like a lightweight fraud detection engine.
+The system immediately calculates a **fraud risk score (0–100%)** using a trained machine learning model.
 
-⚙️ Features
+---
 
-Machine Learning fraud probability model
+### Live Network Monitoring
+The dashboard can also simulate a real-time financial monitoring system.
 
-Dynamic real-time risk adjustment layer
+It connects to a cryptocurrency exchange API and continuously analyzes transaction patterns. If the live API becomes unavailable, the system automatically switches to a fallback simulation to keep the monitoring stream active.
 
-Live BTC/USD trade integration via Kraken (CCXT)
+Key capabilities:
 
-Auto-updating risk graph
+- Live BTC price tracking  
+- Continuous fraud risk scoring  
+- Real-time risk trend chart  
+- Automatic fallback simulation  
 
-Manual transaction simulation
+---
 
-Enterprise-style dark UI
+## Machine Learning Model
 
-🛠 Tech Stack
+The fraud detection engine uses a **Random Forest Classifier** trained on dynamically generated transaction data.
 
-Python • Streamlit • Scikit-learn • Pandas • NumPy • CCXT • Joblib
+Features used for prediction:
 
-▶ Run Locally
-pip install -r requirements.txt
-streamlit run fraud_detector.py
+- Transaction Amount
+- Transaction Time
+- Cardholder Age
+- Geographic Location
+- Merchant Category
+
+Additional heuristics are applied to generate smooth and realistic fraud probability scores.
+
+---
+
+## Tech Stack
+
+**Frontend / Dashboard**
+- Streamlit
+
+**Machine Learning**
+- Scikit-learn (RandomForestClassifier)
+
+**Data Processing**
+- Pandas  
+- NumPy  
+
+**Live Data Integration**
+- CCXT (Kraken cryptocurrency exchange API)
+
+**Visualization**
+- Streamlit Charts
+
+---
+
+## Development Roadmap
+
+The project is designed to evolve into a more advanced fraud monitoring system.
+
+![Fraud Shield Roadmap] https://drive.google.com/file/d/1ETwgxgQCiWfAJuXuNvl-lnXRiHSDSAkR/view?usp=sharing
+
+Future improvements include:
+
+- Unsupervised anomaly detection (Isolation Forest)
+- Multi-asset monitoring (BTC, ETH, SOL)
+- Geo-IP mapping of transaction sources
+- Automated fraud reporting
+- FastAPI microservice for scalable ML inference
+
+---
+
