@@ -225,7 +225,6 @@ def main():
 
             g_col1, g_col2 = st.columns([1, 1.5])
             with g_col1:
-                # ADDED UNIQUE KEY HERE
                 st.plotly_chart(create_gauge(risk_val if risk_val else 0.0), use_container_width=True, config={'displayModeBar': False}, key="manual_gauge")
             with g_col2:
                 if not st.session_state.manual_history.empty:
@@ -278,14 +277,14 @@ def main():
                     with v2:
                         st.line_chart(st.session_state.live_history, height=250)
                         
-                   st.markdown('<div class="input-card"><h3 style="color:#00ffd0; margin-top:0; font-size:18px;">Fraud Alert Dashboard (Last 20)</h3></div>', unsafe_allow_html=True)
+                    st.markdown('<div class="input-card"><h3 style="color:#00ffd0; margin-top:0; font-size:18px;">Fraud Alert Dashboard (Last 20)</h3></div>', unsafe_allow_html=True)
                     
-styled_ledger = st.session_state.alert_ledger.style.map(
-    lambda v: 'color: #ef4444; font-weight: bold;' if v == '🚨 BLOCKED' else ('color: #00ffd0; font-weight: bold;' if v == '✅ SECURE' else ''),
-    subset=['Status']
-)
-
-st.dataframe(styled_ledger, use_container_width=True, hide_index=True)
+                    # PROPERLY INDENTED AND USING .MAP()
+                    styled_ledger = st.session_state.alert_ledger.style.map(
+                        lambda v: 'color: #ef4444; font-weight: bold;' if v == '🚨 BLOCKED' else ('color: #00ffd0; font-weight: bold;' if v == '✅ SECURE' else ''),
+                        subset=['Status']
+                    )
+                    st.dataframe(styled_ledger, use_container_width=True, hide_index=True)
                 
                 time.sleep(1.5)
         else:
@@ -297,13 +296,18 @@ st.dataframe(styled_ledger, use_container_width=True, hide_index=True)
                 
                 v1, v2 = st.columns([1, 2])
                 with v1:
-                    # ADDED UNIQUE KEY HERE
                     st.plotly_chart(create_gauge(0.0), use_container_width=True, config={'displayModeBar': False}, key="live_gauge_inactive")
                 with v2:
                     st.line_chart(st.session_state.live_history if not st.session_state.live_history.empty else pd.DataFrame({"Risk": [0]}), height=250)
                     
                 st.markdown('<div class="input-card"><h3 style="color:#00ffd0; margin-top:0; font-size:18px;">Fraud Alert Dashboard (Last 20)</h3></div>', unsafe_allow_html=True)
-                st.dataframe(st.session_state.alert_ledger, use_container_width=True, hide_index=True)
+                
+                # PROPERLY INDENTED AND USING .MAP()
+                styled_ledger_inactive = st.session_state.alert_ledger.style.map(
+                    lambda v: 'color: #ef4444; font-weight: bold;' if v == '🚨 BLOCKED' else ('color: #00ffd0; font-weight: bold;' if v == '✅ SECURE' else ''),
+                    subset=['Status']
+                )
+                st.dataframe(styled_ledger_inactive, use_container_width=True, hide_index=True)
 
 if __name__ == "__main__":
     main()
