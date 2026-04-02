@@ -279,7 +279,7 @@ def main():
                         
                     st.markdown('<div class="input-card"><h3 style="color:#00ffd0; margin-top:0; font-size:18px;">Fraud Alert Dashboard (Last 20)</h3></div>', unsafe_allow_html=True)
                     
-                    # PROPERLY INDENTED AND USING .MAP()
+                   
                     styled_ledger = st.session_state.alert_ledger.style.map(
                         lambda v: 'color: #ef4444; font-weight: bold;' if v == '🚨 BLOCKED' else ('color: #00ffd0; font-weight: bold;' if v == '✅ SECURE' else ''),
                         subset=['Status']
